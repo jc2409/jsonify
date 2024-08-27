@@ -54,11 +54,3 @@ This project is a Python script that extracts metadata from files within a zip a
 
 - You can modify the `FileMetadata` class in `main.py` to adjust the metadata fields extracted from each file.
 - The `extract_text` function can be expanded to handle additional file types for text extraction.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
