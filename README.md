@@ -6,7 +6,7 @@ This project is a Python script that extracts metadata from files within a zip a
 
 - Extracts metadata from various file types within a zip archive
 - Generates JSON files for each processed file, containing structured metadata
-- Handles macOS-specific zip file contents (skips __MACOSX directory)
+- Handles zip file contents
 - Uses Azure OpenAI's language model for intelligent metadata extraction
 
 ## Prerequisites

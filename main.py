@@ -1,6 +1,7 @@
 import os
 import zipfile
 import json
+import shutil
 from dotenv import load_dotenv
 from langchain.prompts.prompt import PromptTemplate
 from langchain_openai import AzureChatOpenAI
@@ -55,47 +56,56 @@ def extract_text(file_path, mime_type):
 def process_zip_file(zip_path, output_folder):
     results = []
     os.makedirs(output_folder, exist_ok=True)
-    
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall('temp_extracted')
-        for filename in zip_ref.namelist():
-            # Skip __MACOSX directory and hidden files
-            if filename.startswith('__MACOSX') or '/.' in filename:
-                continue
-            
-            file_path = os.path.join('temp_extracted', filename)
-            if os.path.isfile(file_path):
-                file_info = zip_ref.getinfo(filename)
-                mime_type = magic.from_file(file_path, mime=True)
+    temp_dir = 'temp_extracted'
 
-                context = {
-                    "filename": filename,
-                    "file_type": mimetypes.guess_extension(mime_type) or "Unknown",
-                    "file_size": file_info.file_size,
-                    "mime_type": mime_type,
-                    "creation_date": "Not available in zip file",
-                    "modification_date": str(file_info.date_time),
-                    "extracted_text": extract_text(file_path, mime_type)
-                }
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            for file_info in zip_ref.infolist():
+                if file_info.is_dir():
+                    continue
 
-                response = chain.invoke({"context": context})
-                results.append(response)
-                
-                # Create subdirectories if necessary
-                json_filename = os.path.splitext(filename)[0] + '.json'
-                json_path = os.path.join(output_folder, json_filename)
-                os.makedirs(os.path.dirname(json_path), exist_ok=True)
-                
-                with open(json_path, 'w') as json_file:
-                    json.dump(response, json_file, indent=2)
+                # Normalize the filename to use OS-specific path separator
+                filename = os.path.normpath(file_info.filename)
 
-    # Clean up
-    for root, dirs, files in os.walk('temp_extracted', topdown=False):
-        for name in files:
-            os.remove(os.path.join(root, name))
-        for name in dirs:
-            os.rmdir(os.path.join(root, name))
-    os.rmdir('temp_extracted')
+                # Skip hidden files and directories (including __MACOSX)
+                if any(part.startswith('.') for part in filename.split(os.sep)):
+                    continue
+
+                # Extract the file
+                zip_ref.extract(file_info, temp_dir)
+                file_path = os.path.join(temp_dir, filename)
+
+                if os.path.isfile(file_path):
+                    mime_type = magic.from_file(file_path, mime=True)
+
+                    context = {
+                        "filename": filename,
+                        "file_type": mimetypes.guess_extension(mime_type) or "Unknown",
+                        "file_size": file_info.file_size,
+                        "mime_type": mime_type,
+                        "creation_date": "Not available in zip file",
+                        "modification_date": str(file_info.date_time),
+                        "extracted_text": extract_text(file_path, mime_type)
+                    }
+
+                    response = chain.invoke({"context": context})
+                    results.append(response)
+
+                    # Create subdirectories if necessary
+                    json_filename = os.path.splitext(filename)[0] + '.json'
+                    json_path = os.path.join(output_folder, json_filename)
+                    os.makedirs(os.path.dirname(json_path), exist_ok=True)
+
+                    with open(json_path, 'w') as json_file:
+                        json.dump(response, json_file, indent=2)
+
+                # Clean up extracted file
+                os.remove(file_path)
+
+    finally:
+        # Clean up temp directory
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
 
     return results
 
