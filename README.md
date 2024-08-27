@@ -18,7 +18,7 @@ This project is a Python script that extracts metadata from files within a zip a
 
 1. Clone this repository:
    ```
-   git clone https://github.com/yourusername/zip-file-metadata-extractor.git
+   git clone https://github.com/jc2409/jsonify.git
    cd zip-file-metadata-extractor
    ```
 
