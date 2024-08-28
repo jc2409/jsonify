@@ -7,7 +7,7 @@ from langchain.prompts.prompt import PromptTemplate
 from langchain_openai import AzureChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
-from typing import List
+from typing import List, Literal
 from langchain_core.prompts import PromptTemplate
 import magic
 import mimetypes
@@ -21,16 +21,50 @@ llm = AzureChatOpenAI(
     temperature=0
 )
 
+# Define controlled vocabularies
+SubjectASPVocab = Literal[
+    "Primary computing education", "Primary STEM education",
+    "Elementary school computing education", "Elementary school STEM education",
+    "Middle school computing education", "Middle school STEM education",
+    "Secondary computing education", "Secondary STEM education",
+    "High school computing education", "High school STEM education",
+    "K-12 computing education", "K12/K-12 STEM education",
+    "Computer Science", "Python", "MicroPython", "Computer Engineering",
+    "Robotics", "Internet of Things (IoT)", "Machine learning (ML)",
+    "Artificial intelligence (AI)", "Teach with physical computing",
+    "micro:bit", "micro:bit v1", "micro:bit v2",
+    "Raspberry Pi", "Raspberry Pi Pico", "Arduino",
+    "Computing", "Coding", "Data Science"
+]
+
+SubjectAUPVocab = Literal[
+    "Computer Science", "Computer Engineering", "Electrical Engineering",
+    "Robotics", "Internet of Things (IoT)", "Machine learning (ML)",
+    "Artificial intelligence (AI)", "Embedded Systems",
+    "Real Time Operating Systems (RTOS)", "Mobile Computing",
+    "Cloud Computing", "Edge Computing", "SW Design & Development",
+    "Digital System", "Digital Signal Processing", "System-on-Chip Design",
+    "Computer Architecture", "VLSI", "Operating Systems", "Linux",
+    "MVE / Helium", "Computing"
+]
+
+TypeVocab = Literal[
+    "EdKit", "Lecture", "Lab", "Video", "Animation", "Course", "Resource"
+]
+
+FormatVocab = Literal["ppt", "doc", "zip", "mp3", "pdf"]
+
 class FileMetadata(BaseModel):
     title: str = Field(description="The name given to the resource by the creator or publisher")
     creator: str = Field(description="The person or organization primarily responsible for the intellectual content of the resource")
-    subject: str = Field(description="The topic of the resource")
+    subject_asp: List[SubjectASPVocab] = Field(description="The ASP subject of the resource")
+    subject_aup: List[SubjectAUPVocab] = Field(description="The AUP subject of the resource")
     description: str = Field(description="A textual description of the content of the resource")
     publisher: str = Field(description="The entity responsible for making the resource available")
     contributor: str = Field(description="A person or organization (other than the Creator) who is responsible for making significant contributions to the intellectual content of the resource")
     date: str = Field(description="A date associated with the creation or availability of the resource")
-    type: str = Field(description="The nature or genre of the content of the resource")
-    format: str = Field(description="The physical or digital manifestation of the resource")
+    type: List[TypeVocab] = Field(description="The nature or genre of the content of the resource")
+    format: List[FormatVocab] = Field(description="The physical or digital manifestation of the resource")
     identifier: str = Field(description="An unambiguous reference that uniquely identifies the resource within a given context")
     source: str = Field(description="A reference to a second resource from which the present resource is derived")
     language: str = Field(description="The language of the intellectual content of the resource")
