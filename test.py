@@ -209,7 +209,7 @@ def process_zip_file(zip_file):
 
 
 def main():
-    st.title("ZIP File Metadata Extractor")
+    st.title("Metadata Extractor")
 
     uploaded_file = st.file_uploader("Choose a ZIP file", type="zip")
 
@@ -219,6 +219,16 @@ def main():
                 results, output_folder = process_zip_file(uploaded_file)
 
             st.success(f"Metadata is created successfully in JSON format!")
+
+            # Create a ZIP file of the results
+            zip_path = "metadata_results.zip"
+            with zipfile.ZipFile(zip_path, "w") as zipf:
+                for root, _, files in os.walk(output_folder):
+                    for file in files:
+                        zipf.write(
+                            os.path.join(root, file),
+                            os.path.relpath(os.path.join(root, file), output_folder),
+                        )
 
             # Offer the ZIP file for download
             with open(zip_path, "rb") as file:
@@ -235,16 +245,6 @@ def main():
                 st.json(result)
                 if i < 2:  # Add a separator between examples, except after the last one
                     st.markdown("---")
-
-            # Create a ZIP file of the results
-            zip_path = "metadata_results.zip"
-            with zipfile.ZipFile(zip_path, "w") as zipf:
-                for root, _, files in os.walk(output_folder):
-                    for file in files:
-                        zipf.write(
-                            os.path.join(root, file),
-                            os.path.relpath(os.path.join(root, file), output_folder),
-                        )
 
             # Clean up
             os.remove(zip_path)
