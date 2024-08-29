@@ -7,12 +7,14 @@ from langchain.prompts.prompt import PromptTemplate
 from langchain_openai import AzureChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_community.document_loaders import PyPDFLoader
 from typing import List, Literal
 from langchain_core.prompts import PromptTemplate
 import magic
 import mimetypes
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_file
 from werkzeug.utils import secure_filename
+import threading
 
 load_dotenv()
 
@@ -83,34 +85,53 @@ prompt = PromptTemplate(
     partial_variables={"format_instructions": parser.get_format_instructions()},
 )
 
+def clean_metadata_folder(output_folder):
+    folder = output_folder
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
 def extract_text(file_path, mime_type):
-    if mime_type.startswith('text/'):
-        with open(file_path, 'r', errors='ignore') as f:
-            return f.read(1000)  # Read first 1000 characters
-    elif mime_type == 'application/pdf':
-        # Use PyPDF2 or a similar library to extract text from PDF
-        pass
+    if mime_type.startswith("text/"):
+        with open(file_path, "r", errors="ignore") as f:
+            return f.read()  # Read first 1000 characters
+    elif mime_type == "application/pdf":
+        from langchain.document_loaders import PyPDFLoader
+
+        loader = PyPDFLoader(file_path)
+        pages = loader.load()
+
+        # Concatenate text from all pages and limit to first 1000 characters
+        full_text = " ".join(page.page_content for page in pages)
+        return full_text
+
     return "Text extraction not supported for this file type"
 
 def process_zip_file(zip_path, output_folder):
+
     results = []
+    clean_metadata_folder(output_folder)
     os.makedirs(output_folder, exist_ok=True)
     temp_dir = 'temp_extracted'
 
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+
             for file_info in zip_ref.infolist():
                 if file_info.is_dir():
                     continue
 
-                # Normalize the filename to use OS-specific path separator
                 filename = os.path.normpath(file_info.filename)
 
-                # Skip hidden files and directories (including __MACOSX)
                 if any(part.startswith('.') for part in filename.split(os.sep)):
                     continue
 
-                # Extract the file
                 zip_ref.extract(file_info, temp_dir)
                 file_path = os.path.join(temp_dir, filename)
 
@@ -130,7 +151,6 @@ def process_zip_file(zip_path, output_folder):
                     response = chain.invoke({"context": context})
                     results.append(response)
 
-                    # Create subdirectories if necessary
                     json_filename = os.path.splitext(filename)[0] + '.json'
                     json_path = os.path.join(output_folder, json_filename)
                     os.makedirs(os.path.dirname(json_path), exist_ok=True)
@@ -138,14 +158,12 @@ def process_zip_file(zip_path, output_folder):
                     with open(json_path, 'w') as json_file:
                         json.dump(response, json_file, indent=2)
 
-                # Clean up extracted file
                 os.remove(file_path)
 
     finally:
-        # Clean up temp directory
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-
+    
     return results
 
 chain = prompt | llm | parser
@@ -168,11 +186,12 @@ def upload_file():
         file.save(temp_zip_path)
         
         output_folder = "metadata_json_files"
+        
         try:
-            metadata_results = process_zip_file(temp_zip_path, output_folder)
+            results = process_zip_file(temp_zip_path, output_folder)
             return jsonify({
-                "message": f"Processed {len(metadata_results)} files",
-                "results": metadata_results
+                "message": f"Processed {len(results)} files",
+                "results": results
             }), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -180,6 +199,22 @@ def upload_file():
             os.remove(temp_zip_path)
     else:
         return jsonify({"error": "Invalid file type. Please upload a ZIP file."}), 400
+
+@app.route('/download')
+def download_files():
+    output_folder = "metadata_json_files"
+    if not os.path.exists(output_folder) or not os.listdir(output_folder):
+        return jsonify({"error": "No JSON files available for download"}), 404
+    
+    zip_path = "metadata_results.zip"
+    
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for root, _, files in os.walk(output_folder):
+            for file in files:
+                zipf.write(os.path.join(root, file), 
+                           os.path.relpath(os.path.join(root, file), output_folder))
+    
+    return send_file(zip_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -27,7 +27,7 @@
             border: 2px dashed #ccc;
             border-radius: 4px;
             padding: 2rem;
-            cursor: pointer;
+            cursor: pointer;z
             margin-bottom: 1rem;
         }
         .upload-area.dragover {
@@ -36,7 +36,7 @@
         #file-input {
             display: none;
         }
-        #upload-button {
+        button {
             background-color: #4CAF50;
             color: white;
             padding: 10px 20px;
@@ -44,24 +44,14 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            margin-top: 1rem;
         }
-        #upload-button:disabled {
+        button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
         #status {
             margin-top: 1rem;
-        }
-        #results {
-            margin-top: 2rem;
-            text-align: left;
-        }
-        .result-item {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 1rem;
-            margin-bottom: 1rem;
         }
     </style>
 </head>
@@ -74,40 +64,36 @@
         </div>
         <button id="upload-button" disabled>Upload and Process ZIP File</button>
         <div id="status"></div>
-        <div id="results"></div>
+        <button id="download-button" style="display: none;">Download JSON Files</button>
     </div>
 
     <script>
         const dropArea = document.getElementById('drop-area');
         const fileInput = document.getElementById('file-input');
         const uploadButton = document.getElementById('upload-button');
+        const downloadButton = document.getElementById('download-button');
         const status = document.getElementById('status');
-        const results = document.getElementById('results');
 
         dropArea.addEventListener('click', () => fileInput.click());
-
         dropArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropArea.classList.add('dragover');
         });
-
         dropArea.addEventListener('dragleave', () => {
             dropArea.classList.remove('dragover');
         });
-
         dropArea.addEventListener('drop', (e) => {
             e.preventDefault();
             dropArea.classList.remove('dragover');
             fileInput.files = e.dataTransfer.files;
             updateUploadButton();
         });
-
         fileInput.addEventListener('change', updateUploadButton);
 
         function updateUploadButton() {
             uploadButton.disabled = !fileInput.files.length;
             status.textContent = fileInput.files.length ? `File selected: ${fileInput.files[0].name}` : '';
-            results.innerHTML = '';
+            downloadButton.style.display = 'none';
         }
 
         uploadButton.addEventListener('click', async () => {
@@ -119,7 +105,6 @@
 
             status.textContent = 'Uploading and processing...';
             uploadButton.disabled = true;
-            results.innerHTML = '';
 
             try {
                 const response = await fetch('/upload', {
@@ -131,7 +116,7 @@
 
                 if (response.ok) {
                     status.textContent = result.message;
-                    displayResults(result.results);
+                    downloadButton.style.display = 'inline-block';
                 } else {
                     status.textContent = `Error: ${result.error}`;
                 }
@@ -143,24 +128,9 @@
             }
         });
 
-        function displayResults(resultsArray) {
-            results.innerHTML = '<h2>Extracted Metadata:</h2>';
-            resultsArray.forEach((item, index) => {
-                const resultItem = document.createElement('div');
-                resultItem.classList.add('result-item');
-                resultItem.innerHTML = `
-                    <h3>File ${index + 1}: ${item.title}</h3>
-                    <p><strong>Creator:</strong> ${item.creator}</p>
-                    <p><strong>Subject:</strong> ${item.subject}</p>
-                    <p><strong>Description:</strong> ${item.description}</p>
-                    <p><strong>Date:</strong> ${item.date}</p>
-                    <p><strong>Type:</strong> ${item.type}</p>
-                    <p><strong>Format:</strong> ${item.format}</p>
-                    <p><strong>Keywords:</strong> ${item.keywords.join(', ')}</p>
-                `;
-                results.appendChild(resultItem);
-            });
-        }
+        downloadButton.addEventListener('click', () => {
+            window.location.href = '/download';
+        });
     </script>
 </body>
 </html>
