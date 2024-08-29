@@ -13,6 +13,7 @@ langchain-core = "*"
 pypdf = "*"
 python-magic = "*"
 flask = "*"
+streamlit = "*"
 
 [dev-packages]
 
