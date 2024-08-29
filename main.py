@@ -220,7 +220,9 @@ def process_zip_file(zip_path, output_folder):
 chain = prompt | llm | parser
 
 # Usage
-zip_file_path = "/Users/jaecho01/Library/CloudStorage/OneDrive-Arm/Documents/metadata/course.zip"
+zip_file_path = (
+    "/Users/jaecho01/Library/CloudStorage/OneDrive-Arm/Documents/metadata/course.zip"
+)
 output_folder = "metadata_json_files"
 metadata_results = process_zip_file(zip_file_path, output_folder)
 

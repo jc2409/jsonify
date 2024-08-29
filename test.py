@@ -131,6 +131,7 @@ class FileMetadata(BaseModel):
 llm = AzureChatOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
     temperature=0,
 )
 
