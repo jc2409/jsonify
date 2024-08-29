@@ -148,8 +148,6 @@ def extract_text(file_path, mime_type):
         with open(file_path, "r", errors="ignore") as f:
             return f.read()  # Read first 1000 characters
     elif mime_type == "application/pdf":
-        from langchain.document_loaders import PyPDFLoader
-
         loader = PyPDFLoader(file_path)
         pages = loader.load()
 

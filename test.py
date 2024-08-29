@@ -1,5 +1,4 @@
 import streamlit as st
-import time
 import os
 import zipfile
 import json
@@ -9,6 +8,7 @@ from langchain.prompts.prompt import PromptTemplate
 from langchain_openai import AzureChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain.document_loaders import PyPDFLoader
 from typing import List, Literal
 import magic
 import mimetypes
@@ -151,8 +151,6 @@ def extract_text(file_path, mime_type):
         with open(file_path, "r", errors="ignore") as f:
             return f.read()  # Read first 1000 characters
     elif mime_type == "application/pdf":
-        from langchain.document_loaders import PyPDFLoader
-
         loader = PyPDFLoader(file_path)
         pages = loader.load()
 
